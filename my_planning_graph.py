@@ -1,3 +1,6 @@
+from functools import partial
+from itertools import product
+
 from aimacode.planning import Action
 from aimacode.search import Problem
 from aimacode.utils import expr
@@ -201,7 +204,7 @@ def mutexify(node1: PgNode, node2: PgNode):
 class PlanningGraph():
     '''
     A planning graph as described in chapter 10 of the AIMA text. The planning
-    graph can be used to reason about 
+    graph can be used to reason about
     '''
 
     def __init__(self, problem: Problem, state: str, serial_planning=True):
@@ -269,7 +272,8 @@ class PlanningGraph():
         # the graph should only be built during class construction
         if (len(self.s_levels) != 0) or (len(self.a_levels) != 0):
             raise Exception(
-                'Planning Graph already created; construct a new planning graph for each new state in the planning sequence')
+                'Planning Graph already created; construct a new planning graph for each new state in the planning sequence'
+            )
 
         # initialize S0 to literals in initial state provided.
         leveled = False
@@ -304,13 +308,33 @@ class PlanningGraph():
         :return:
             adds A nodes to the current level in self.a_levels[level]
         '''
-        # TODO add action A level to the planning graph as described in the Russell-Norvig text
-        # 1. determine what actions to add and create those PgNode_a objects
-        # 2. connect the nodes to the previous S literal level
-        # for example, the A0 level will iterate through all possible actions for the problem and add a PgNode_a to a_levels[0]
-        #   set iff all prerequisite literals for the action hold in S0.  This can be accomplished by testing
-        #   to see if a proposed PgNode_a has prenodes that are a subset of the previous S level.  Once an
-        #   action node is added, it MUST be connected to the S node instances in the appropriate s_level set.
+
+        def is_possible(parents, action):
+            """Return True if an action is possible given its parent states nodes.
+            * all positive preconditions must be included in the parent nodes (subset)
+            * all negative preconditions must be included in the parent nodes (subset)
+            """
+            parent_positives = {s.literal for s in parents if s.is_pos}
+            parent_negatives = {s.literal for s in parents if not s.is_pos}
+            action_positives = {s.literal for s in action.prenodes if s.is_pos}
+            action_negatives = {s.literal for s in action.prenodes if not s.is_pos}
+
+            return action_positives.issubset(parent_positives) and \
+                   action_negatives.issubset(parent_negatives)
+
+        # create children
+        parents = self.s_levels[level]
+        actions = map(PgNode_a, self.all_actions)
+        is_possible_given_parents = partial(is_possible, parents)
+        children = set(filter(is_possible_given_parents, actions))
+
+        # link action nodes
+        for parent, child in product(parents, children):
+            child.parents.add(parent)
+            parent.children.add(child)
+
+        # append a new action level to the graph
+        self.a_levels.append(children)
 
     def add_literal_level(self, level):
         ''' add an S (literal) level to the Planning Graph
@@ -321,14 +345,18 @@ class PlanningGraph():
         :return:
             adds S nodes to the current level in self.s_levels[level]
         '''
-        # TODO add literal S level to the planning graph as described in the Russell-Norvig text
-        # 1. determine what literals to add
-        # 2. connect the nodes
-        # for example, every A node in the previous level has a list of S nodes in effnodes that represent the effect
-        #   produced by the action.  These literals will all be part of the new S level.  Since we are working with sets, they
-        #   may be "added" to the set without fear of duplication.  However, it is important to then correctly create and connect
-        #   all of the new S nodes as children of all the A nodes that could produce them, and likewise add the A nodes to the
-        #   parent sets of the S nodes
+        children = set()
+        parents = self.a_levels[level - 1]
+
+        # link and collect literal nodes
+        for parent in parents:
+            for child in parent.effnodes:
+                children.add(child)
+                child.parents.add(parent)
+                parent.children.add(child)
+
+        # append a new literal level to the graph
+        self.s_levels.append(children)
 
     def update_a_mutex(self, nodeset):
         ''' Determine and update sibling mutual exclusion for A-level nodes
@@ -348,10 +376,8 @@ class PlanningGraph():
         nodelist = list(nodeset)
         for i, n1 in enumerate(nodelist[:-1]):
             for n2 in nodelist[i + 1:]:
-                if (self.serialize_actions(n1, n2) or
-                        self.inconsistent_effects_mutex(n1, n2) or
-                        self.interference_mutex(n1, n2) or
-                        self.competing_needs_mutex(n1, n2)):
+                if (self.serialize_actions(n1, n2) or self.inconsistent_effects_mutex(n1, n2) or
+                        self.interference_mutex(n1, n2) or self.competing_needs_mutex(n1, n2)):
                     mutexify(n1, n2)
 
     def serialize_actions(self, node_a1: PgNode_a, node_a2: PgNode_a) -> bool:
@@ -391,7 +417,7 @@ class PlanningGraph():
 
     def interference_mutex(self, node_a1: PgNode_a, node_a2: PgNode_a) -> bool:
         '''
-        Test a pair of actions for mutual exclusion, returning True if the 
+        Test a pair of actions for mutual exclusion, returning True if the
         effect of one action is the negation of a precondition of the other.
 
         HINT: The Action instance associated with an action node is accessible
