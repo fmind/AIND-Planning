@@ -412,8 +412,11 @@ class PlanningGraph():
         :param node_a2: PgNode_a
         :return: bool
         '''
-        # TODO test for Inconsistent Effects between nodes
-        return False
+        a1_add, a1_rem = set(node_a1.action.effect_add), set(node_a1.action.effect_rem)
+        a2_add, a2_rem = set(node_a2.action.effect_add), set(node_a2.action.effect_rem)
+
+        # test if there is an overlap between effects
+        return (a1_add & a2_rem) or (a1_rem & a2_add)
 
     def interference_mutex(self, node_a1: PgNode_a, node_a2: PgNode_a) -> bool:
         '''
@@ -429,8 +432,14 @@ class PlanningGraph():
         :param node_a2: PgNode_a
         :return: bool
         '''
-        # TODO test for Interference between nodes
-        return False
+        a1_add, a1_rem = set(node_a1.action.effect_add), set(node_a1.action.effect_rem)
+        a2_add, a2_rem = set(node_a2.action.effect_add), set(node_a2.action.effect_rem)
+        a1_pos, a1_neg = set(node_a1.action.precond_pos), set(node_a1.action.precond_pos)
+        a2_pos, a2_neg = set(node_a2.action.precond_pos), set(node_a2.action.precond_pos)
+
+        # test if there is an overlap between effects and preconditions
+        return (a1_add & a2_neg) or (a1_rem & a2_pos) or \
+               (a2_add & a1_neg) or (a2_rem & a1_pos)
 
     def competing_needs_mutex(self, node_a1: PgNode_a, node_a2: PgNode_a) -> bool:
         '''
@@ -442,9 +451,9 @@ class PlanningGraph():
         :param node_a2: PgNode_a
         :return: bool
         '''
-
-        # TODO test for Competing Needs between nodes
-        return False
+        # test if there is a mutex between preconditions (parent nodes)
+        parents = product(node_a1.parents, node_a2.parents)
+        return any(p1.is_mutex(p2) for p1, p2 in parents)
 
     def update_s_mutex(self, nodeset: set):
         ''' Determine and update sibling mutual exclusion for S-level nodes
