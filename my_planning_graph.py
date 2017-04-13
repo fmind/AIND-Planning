@@ -333,7 +333,7 @@ class PlanningGraph():
             child.parents.add(parent)
             parent.children.add(child)
 
-        # append a new action level to the graph
+        # append a new action level
         self.a_levels.append(children)
 
     def add_literal_level(self, level):
@@ -348,14 +348,14 @@ class PlanningGraph():
         children = set()
         parents = self.a_levels[level - 1]
 
-        # link and collect literal nodes
+        # collect/link literal nodes
         for parent in parents:
             for child in parent.effnodes:
                 children.add(child)
                 child.parents.add(parent)
                 parent.children.add(child)
 
-        # append a new literal level to the graph
+        # append a new literal level
         self.s_levels.append(children)
 
     def update_a_mutex(self, nodeset):
@@ -451,8 +451,9 @@ class PlanningGraph():
         :param node_a2: PgNode_a
         :return: bool
         '''
-        # test if there is a mutex between preconditions (parent nodes)
         parents = product(node_a1.parents, node_a2.parents)
+
+        # test if there is a mutex between preconditions (parent nodes)
         return any(p1.is_mutex(p2) for p1, p2 in parents)
 
     def update_s_mutex(self, nodeset: set):
@@ -487,8 +488,9 @@ class PlanningGraph():
         :param node_s2: PgNode_s
         :return: bool
         '''
-        # TODO test for negation between nodes
-        return False
+        # test if there is a contradiction between nodes
+        return (node_s1.symbol == node_s2.symbol) and \
+               (node_s1.is_pos != node_s2.is_pos)
 
     def inconsistent_support_mutex(self, node_s1: PgNode_s, node_s2: PgNode_s):
         '''
@@ -506,15 +508,27 @@ class PlanningGraph():
         :param node_s2: PgNode_s
         :return: bool
         '''
-        # TODO test for Inconsistent Support between nodes
-        return False
+        parents = product(node_s1.parents, node_s2.parents)
+
+        # test if there is only mutex between actions (parent nodes)
+        return all(p1.is_mutex(p2) for p1, p2 in parents)
 
     def h_levelsum(self) -> int:
         '''The sum of the level costs of the individual goals (admissible if goals independent)
 
         :return: int
         '''
-        level_sum = 0
-        # TODO implement
-        # for each goal in the problem, determine the level cost, then add them together
-        return level_sum
+
+        def level_cost(levels, goal):
+            """Return the index of the first matching level."""
+            # rely on __eq__ method for testing
+            as_node = PgNode_s(goal, True)
+
+            for index, nodes in levels:
+                if as_node in nodes:
+                    return index
+
+        level_cost_given_levels = partial(level_cost, enumerate(self.s_levels))
+
+        # compute the sum of all level costs for each goal in the problem
+        return sum(level_cost_given_levels(g) for g in self.problem.goal)
