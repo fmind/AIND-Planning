@@ -123,7 +123,7 @@ class AirCargoProblem(Problem):
         """
 
         def is_possible(clauses, action):
-            """return true if an action is possible given a set of clauses.
+            """Return True if an action is possible given a set of clauses.
             * all positive preconditions must be included in clauses (subset)
             * all negative preconditions must be excluded from clauses (disjoint)"""
             return set(action.precond_pos).issubset(clauses) and \
@@ -131,7 +131,7 @@ class AirCargoProblem(Problem):
 
         kb = PropKB()
         kb.tell(decode_state(state, self.state_map).pos_sentence())
-        is_possible_given_clauses = partial(is_possible, kb.clauses)
+        is_possible_given_clauses = partial(is_possible, set(kb.clauses))
 
         return list(filter(is_possible_given_clauses, self.actions_list))
 
@@ -192,9 +192,16 @@ class AirCargoProblem(Problem):
         conditions by ignoring the preconditions required for an action to be
         executed.
         '''
-        # TODO implement (see Russell-Norvig Ed-3 10.2.3  or Russell-Norvig Ed-2 11.2)
-        count = 0
-        return count
+
+        def is_absent(clauses, goal):
+            """Return True if a goal is absent given a set of clauses."""
+            return goal not in clauses
+
+        kb = PropKB()
+        kb.tell(decode_state(node.state, self.state_map).pos_sentence())
+        is_absent_given_clauses = partial(is_absent, set(kb.clauses))
+
+        return len(list(filter(is_absent_given_clauses, self.goal)))
 
 
 def air_cargo_p1() -> AirCargoProblem:
