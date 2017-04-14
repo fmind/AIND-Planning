@@ -56,6 +56,8 @@ def run_search(pname, sname, hname, problem, search_function, parameter=None):
     data_file = "{0}-{1}-{2}.json".format(pname, sname, hname).lower().replace(' ', '_')
     data_path = os.path.join('data', 'run', data_file)
 
+    print("Running: {}".format(data_file))
+
     # benchmark
     start = timer()
     ip = PrintableProblem(problem)
@@ -126,6 +128,7 @@ if __name__ == "__main__":
                                      "and informed heuristic search.")
     parser.add_argument(
         '-m', '--manual', action="store_true", help="Interactively select the problems and searches to run.")
+    parser.add_argument('-A', '--all', action="store_true", help="Run search for all problems and functions.")
     parser.add_argument(
         '-p',
         '--problems',
@@ -149,6 +152,8 @@ if __name__ == "__main__":
 
     if args.manual:
         manual()
+    elif args.all:
+        main(range(1, len(PROBLEMS) + 1), range(1, len(SEARCHES) + 1))
     elif args.problems and args.searches:
         main(list(sorted(set(args.problems))), list(sorted(set((args.searches)))))
     else:
