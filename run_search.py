@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+from concurrent.futures import ProcessPoolExecutor
 from timeit import default_timer as timer
 
 from aimacode.search import (InstrumentedProblem, astar_search,
@@ -104,16 +105,16 @@ def main(p_choices, s_choices):
     problems = [PROBLEMS[i - 1] for i in map(int, p_choices)]
     searches = [SEARCHES[i - 1] for i in map(int, s_choices)]
 
-    for pname, p in problems:
+    with ProcessPoolExecutor() as executor:
+        for pname, p in problems:
+            for sname, s, h in searches:
+                # hstring = h if not h else " with {}".format(h)
+                # print("\nSolving {} using {}{}...".format(pname, sname, hstring))
+                hname = h if h else 'uninformed'
+                _p = p()
+                _h = None if not h else getattr(_p, h)
 
-        for sname, s, h in searches:
-            # hstring = h if not h else " with {}".format(h)
-            # print("\nSolving {} using {}{}...".format(pname, sname, hstring))
-            hname = h if h else 'uninformed'
-
-            _p = p()
-            _h = None if not h else getattr(_p, h)
-            run_search(pname, sname, hname, _p, s, _h)
+                executor.submit(run_search, pname, sname, hname, _p, s, _h)
 
 
 def show_solution(node, elapsed_time):
