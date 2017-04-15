@@ -1,1 +1,1 @@
-{"new_nodes": 180, "plan": ["Load(C1, P1, SFO)", "Load(C2, P2, JFK)", "Fly(P2, JFK, SFO)", "Unload(C2, P2, SFO)", "Fly(P1, SFO, JFK)", "Unload(C1, P1, JFK)"], "expansions": 43, "goal_tests": 56, "runtime": 0.023208083000099577, "plan_length": 6}
+{"runtime": 0.024267962000521948, "plan": ["Load(C1, P1, SFO)", "Load(C2, P2, JFK)", "Fly(P2, JFK, SFO)", "Unload(C2, P2, SFO)", "Fly(P1, SFO, JFK)", "Unload(C1, P1, JFK)"], "goal_tests": 56, "expansions": 43, "plan_length": 6, "new_nodes": 180}
