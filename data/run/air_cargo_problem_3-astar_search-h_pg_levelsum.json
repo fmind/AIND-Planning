@@ -1,0 +1,1 @@
+{"expansions": 405, "new_nodes": 3724, "goal_tests": 407, "plan": ["Load(C2, P2, JFK)", "Fly(P2, JFK, ORD)", "Load(C4, P2, ORD)", "Fly(P2, ORD, SFO)", "Load(C1, P1, SFO)", "Fly(P1, SFO, ATL)", "Load(C3, P1, ATL)", "Fly(P1, ATL, JFK)", "Unload(C4, P2, SFO)", "Unload(C3, P1, JFK)", "Unload(C2, P2, SFO)", "Unload(C1, P1, JFK)"], "plan_length": 12, "runtime": 1216.337195279999}
