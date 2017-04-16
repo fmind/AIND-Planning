@@ -310,30 +310,22 @@ class PlanningGraph():
         '''
 
         def is_possible(parents, action):
-            """Return True if an action is possible given its parent states nodes.
-            * all positive preconditions must be included in the parent nodes (subset)
-            * all negative preconditions must be included in the parent nodes (subset)
-            """
-            parent_positives = {s.literal for s in parents if s.is_pos}
-            parent_negatives = {s.literal for s in parents if not s.is_pos}
-            action_positives = {s.literal for s in action.prenodes if s.is_pos}
-            action_negatives = {s.literal for s in action.prenodes if not s.is_pos}
+            """Test if prenodes are a subset of parents."""
+            return action.prenodes.issubset(parents)
 
-            return action_positives.issubset(parent_positives) and \
-                   action_negatives.issubset(parent_negatives)
-
-        # create children
+        children = set()
         parents = self.s_levels[level]
         actions = map(PgNode_a, self.all_actions)
         is_possible_given_parents = partial(is_possible, parents)
-        children = set(filter(is_possible_given_parents, actions))
+        possible_actions = filter(is_possible_given_parents, actions)
 
-        # link action nodes
-        for parent, child in product(parents, children):
-            child.parents.add(parent)
-            parent.children.add(child)
+        for action in possible_actions:
+            children.add(action) 
 
-        # append a new action level
+            for parent in action.prenodes:
+                action.parents.add(parent)
+                parent.children.add(action)
+
         self.a_levels.append(children)
 
     def add_literal_level(self, level):
@@ -391,7 +383,6 @@ class PlanningGraph():
         :param node_a2: PgNode_a
         :return: bool
         '''
-        #
         if not self.serial:
             return False
         if node_a1.is_persistent or node_a2.is_persistent:
@@ -451,10 +442,8 @@ class PlanningGraph():
         :param node_a2: PgNode_a
         :return: bool
         '''
-        parents = product(node_a1.parents, node_a2.parents)
-
         # test if there is a mutex between preconditions (parent nodes)
-        return any(p1.is_mutex(p2) for p1, p2 in parents)
+        return any(p1.is_mutex(p2) for p1, p2 in product(node_a1.parents, node_a2.parents))
 
     def update_s_mutex(self, nodeset: set):
         ''' Determine and update sibling mutual exclusion for S-level nodes
@@ -508,10 +497,8 @@ class PlanningGraph():
         :param node_s2: PgNode_s
         :return: bool
         '''
-        parents = product(node_s1.parents, node_s2.parents)
-
         # test if there is only mutex between actions (parent nodes)
-        return all(p1.is_mutex(p2) for p1, p2 in parents)
+        return all(p1.is_mutex(p2) for p1, p2 in product(node_s1.parents, node_s2.parents))
 
     def h_levelsum(self) -> int:
         '''The sum of the level costs of the individual goals (admissible if goals independent)
@@ -520,14 +507,13 @@ class PlanningGraph():
         '''
 
         def level_cost(levels, goal):
-            for level, nodes in levels:
-                literals = {n.literal for n in nodes}
-                if goal in literals:
-                    return level
+            for depth, nodes in enumerate(levels):
+                for n in nodes:
+                    if n.literal == goal:
+                        return depth
 
-            return 0  # not found
+            return 0
 
-        level_cost_given_levels = partial(level_cost, enumerate(self.s_levels))
+        level_cost_given_levels = partial(level_cost, self.s_levels)
 
-        # compute the sum of all level costs for each goal in the problem
-        return sum(level_cost_given_levels(g) for g in self.problem.goal)
+        return sum(map(level_cost_given_levels, self.problem.goal))
