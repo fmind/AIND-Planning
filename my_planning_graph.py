@@ -520,13 +520,12 @@ class PlanningGraph():
         '''
 
         def level_cost(levels, goal):
-            """Return the index of the first matching level."""
-            # rely on __eq__ method for testing
-            as_node = PgNode_s(goal, True)
+            for level, nodes in levels:
+                literals = {n.literal for n in nodes}
+                if goal in literals:
+                    return level
 
-            for index, nodes in levels:
-                if as_node in nodes:
-                    return index
+            return 0  # not found
 
         level_cost_given_levels = partial(level_cost, enumerate(self.s_levels))
 
